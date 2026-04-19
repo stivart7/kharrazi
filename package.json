@@ -1,0 +1,32 @@
+{
+  "name": "kharrazi",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"yarn workspace @rental/api dev\" \"yarn workspace @rental/web dev\"",
+    "build": "yarn workspace @rental/database generate && yarn workspace @rental/api build && yarn workspace @rental/web build",
+    "db:generate": "yarn workspace @rental/database generate",
+    "db:migrate": "yarn workspace @rental/database migrate:dev",
+    "db:migrate:prod": "yarn workspace @rental/database migrate:deploy",
+    "db:seed": "yarn workspace @rental/database seed",
+    "db:studio": "yarn workspace @rental/database studio",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:build": "docker-compose build --no-cache",
+    "lint": "eslint apps/*/src --ext .ts,.tsx",
+    "type-check": "yarn workspace @rental/api type-check && yarn workspace @rental/web type-check"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": "1.x"
+  }
+}

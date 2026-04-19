@@ -1,0 +1,455 @@
+// ============================================
+// Morocco Car Rental - Prisma Schema
+// ============================================
+// Multi-tenant SaaS: every resource is scoped
+// to an Agency via agencyId (tenant isolation).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN  // Platform-level admin
+  AGENCY_ADMIN // Agency owner / manager
+  EMPLOYEE     // Front-desk staff
+  ACCOUNTANT   // Read-only financial access
+}
+
+enum CarStatus {
+  AVAILABLE
+  RENTED
+  MAINTENANCE
+  OUT_OF_SERVICE
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum ReservationStatus {
+  PENDING    // Awaiting confirmation
+  CONFIRMED  // Confirmed, not yet started
+  ACTIVE     // Car is currently rented
+  COMPLETED  // Returned successfully
+  CANCELLED  // Cancelled by client or agency
+  NO_SHOW    // Client did not show up
+}
+
+enum PaymentType {
+  DEPOSIT    // Security deposit paid up-front
+  RENTAL     // Rental fee
+  EXTRA      // Extra charges (fuel, damage, etc.)
+  REFUND     // Deposit or overpayment refund
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  CHEQUE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  PARTIAL
+  FAILED
+}
+
+// ─── Agency (Tenant) ──────────────────────────
+
+model Agency {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  city        String?
+  country     String   @default("Morocco")
+  logoUrl     String?
+  website     String?
+  taxNumber   String?  // ICE / Patente
+  isActive          Boolean  @default(true)
+  plan              String   @default("basic") // basic | pro | enterprise
+  subscriptionStart DateTime @default(now())
+  subscriptionEnd   DateTime?
+  monthlyFee        Decimal  @default(0) @db.Decimal(10, 2)
+  // WhatsApp notifications
+  whatsappEnabled    Boolean @default(false)
+  whatsappNumber     String? // e.g. "+212600000000"
+  notifyReservations Boolean @default(true)
+  notifyReturns      Boolean @default(true)
+  notifyReminders    Boolean @default(true)
+  notifyPayments     Boolean @default(true)
+  notifyMaintenance  Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users         User[]
+  cars          Car[]
+  clients       Client[]
+  reservations  Reservation[]
+  payments      Payment[]
+  notifications       Notification[]
+  whatsappLogs        WhatsappLog[]
+  planUpgradeRequests PlanUpgradeRequest[]
+  maintenanceTasks    Maintenance[]
+
+  @@map("agencies")
+}
+
+// ─── User ─────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  firstName    String
+  lastName     String
+  phone        String?
+  avatarUrl    String?
+  role         Role     @default(EMPLOYEE)
+  isActive        Boolean   @default(true)
+  emailVerifiedAt DateTime?
+  lastLoginAt     DateTime?
+  agencyId        String?   // null for SUPER_ADMIN
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agency                Agency?                @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  auditLogs             AuditLog[]
+
+  @@index([agencyId])
+  @@index([email])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ─── Car ──────────────────────────────────────
+
+model Car {
+  id               String       @id @default(cuid())
+  agencyId         String
+  brand            String       // Toyota, Dacia, Renault …
+  model            String       // Corolla, Logan, Clio …
+  year             Int
+  licensePlate     String
+  color            String?
+  fuelType         FuelType     @default(GASOLINE)
+  transmission     Transmission @default(MANUAL)
+  seats            Int          @default(5)
+  doors            Int          @default(4)
+  pricePerDay      Decimal      @db.Decimal(10, 2) // MAD
+  weeklyDiscount   Decimal      @default(0) @db.Decimal(5, 2) // % discount for 7+ days
+  monthlyDiscount  Decimal      @default(0) @db.Decimal(5, 2) // % discount for 30+ days
+  deposit          Decimal      @db.Decimal(10, 2) // Security deposit MAD
+  status           CarStatus    @default(AVAILABLE)
+  mileage          Int          @default(0)
+  images           String[]     @default([])
+  features         String[]     @default([]) // GPS, AC, Bluetooth …
+  description      String?
+  lastMaintenance  DateTime?
+  nextMaintenance  DateTime?
+  insuranceExpiry      DateTime?
+  technicalExpiry      DateTime?    // Visite technique
+  vignetteExpiry       DateTime?    // Vignette annuelle
+  carteGriseDate       DateTime?    // Date carte grise
+  autorisationExpiry   DateTime?    // Autorisation de circulation
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  agency           Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reservations     Reservation[]
+  assignedClient   Client?       @relation("ClientAssignedCar")
+  maintenanceTasks Maintenance[]
+
+  @@index([agencyId])
+  @@index([status])
+  @@map("cars")
+}
+
+// ─── Client ───────────────────────────────────
+
+model Client {
+  id              String    @id @default(cuid())
+  agencyId        String
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String
+  cin             String    // Carte Nationale d'Identité (Moroccan ID)
+  address         String?
+  city            String?
+  nationality     String    @default("Moroccan")
+  licenseNumber   String?
+  licenseExpiry   DateTime?
+  licenseCountry  String?
+  passportNumber  String?   // For foreign clients
+  riskScore       Int       @default(0) // 0-100 (0=safe, 100=high risk)
+  notes             String?
+  assignedCarId     String?   @unique // Voiture actuellement assignée (1 voiture = 1 client)
+  blacklisted       Boolean   @default(false)
+  totalRentals    Int       @default(0)
+  totalSpent      Decimal   @default(0) @db.Decimal(12, 2)
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  agency       Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  assignedCar  Car?          @relation("ClientAssignedCar", fields: [assignedCarId], references: [id])
+
+  @@unique([agencyId, cin])
+  @@index([agencyId])
+  @@index([phone])
+  @@map("clients")
+}
+
+// ─── Reservation ──────────────────────────────
+
+model Reservation {
+  id               String            @id @default(cuid())
+  reservationNumber String           @unique // REF-2024-001
+  agencyId         String
+  carId            String
+  clientId         String
+  startDate        DateTime
+  endDate          DateTime
+  actualReturnDate DateTime?
+  pickupLocation   String?
+  returnLocation   String?
+  totalDays        Int
+  pricePerDay      Decimal           @db.Decimal(10, 2)
+  subtotal         Decimal           @db.Decimal(10, 2)
+  discountAmount   Decimal           @default(0) @db.Decimal(10, 2)
+  discountPercent  Decimal           @default(0) @db.Decimal(5, 2)
+  totalAmount      Decimal           @db.Decimal(10, 2) // After discount
+  depositAmount    Decimal           @db.Decimal(10, 2)
+  depositRefunded  Boolean           @default(false)
+  extraCharges     Decimal           @default(0) @db.Decimal(10, 2)
+  status           ReservationStatus @default(PENDING)
+  isContract              Boolean           @default(false)
+  secondDriverFirstName   String?
+  secondDriverLastName    String?
+  secondDriverCin         String?
+  secondDriverPhone       String?
+  notes            String?
+  contractUrl      String?
+  startMileage     Int?
+  endMileage       Int?
+  fuelLevelStart   String?           // full, 3/4, 1/2, 1/4, empty
+  fuelLevelEnd     String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  agency   Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  car      Car       @relation(fields: [carId], references: [id])
+  client   Client    @relation(fields: [clientId], references: [id])
+  payments Payment[]
+
+  @@index([agencyId])
+  @@index([carId])
+  @@index([clientId])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@map("reservations")
+}
+
+// ─── Payment ──────────────────────────────────
+
+model Payment {
+  id            String        @id @default(cuid())
+  agencyId      String
+  reservationId String
+  amount        Decimal       @db.Decimal(10, 2)
+  type          PaymentType
+  method        PaymentMethod @default(CASH)
+  status        PaymentStatus @default(PENDING)
+  reference     String?       // Receipt or transaction number
+  notes         String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  agency      Agency      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@index([agencyId])
+  @@index([reservationId])
+  @@index([status])
+  @@map("payments")
+}
+
+// ─── Notification ─────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  agencyId  String
+  title     String
+  message   String
+  type      String   // info | warning | success | error
+  read      Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId, read])
+  @@map("notifications")
+}
+
+// ─── Plan Upgrade Request ─────────────────────
+
+model PlanUpgradeRequest {
+  id            String   @id @default(cuid())
+  agencyId      String
+  requestedPlan String   // pro | enterprise
+  status        String   @default("pending") // pending | approved | rejected
+  message       String?  // optional note from the agency
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([agencyId])
+  @@map("plan_upgrade_requests")
+}
+
+// ─── WhatsApp Log (prevent duplicates) ────────
+
+model WhatsappLog {
+  id          String   @id @default(cuid())
+  agencyId    String
+  type        String   // reservation | return | reminder | payment | maintenance
+  referenceId String   // reservationId / paymentId / carId
+  sentAt      DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([type, referenceId])
+  @@index([agencyId])
+  @@map("whatsapp_logs")
+}
+
+// ─── Maintenance ──────────────────────────────
+
+enum MaintenanceType {
+  VIDANGE
+  PNEUS
+  REPARATION
+  ASSURANCE
+  VISITE_TECHNIQUE
+  CHECK
+  AUTRE
+}
+
+enum MaintenanceStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Maintenance {
+  id             String            @id @default(cuid())
+  agencyId       String
+  carId          String
+  type           MaintenanceType
+  date           DateTime
+  expirationDate DateTime?
+  mileage        Int?
+  cost           Float?
+  status         MaintenanceStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  car    Car    @relation(fields: [carId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([carId])
+  @@index([status])
+  @@map("maintenance_tasks")
+}
+
+// ─── Audit Log ────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String   // CREATE | UPDATE | DELETE | LOGIN | LOGOUT
+  resource   String   // cars | clients | reservations | payments
+  resourceId String?
+  oldData    Json?
+  newData    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
