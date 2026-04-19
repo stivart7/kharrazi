@@ -224,7 +224,7 @@ export function ReservationForm() {
 
           {/* ── 1. Client ── */}
           <Section icon={User} title="Informations client">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Prénom *</Label>
                 <Input placeholder="Mohamed" {...register('clientFirstName')} className="h-9" />
@@ -249,7 +249,7 @@ export function ReservationForm() {
 
           {/* ── 2. Véhicule ── */}
           <Section icon={Car} title="Informations véhicule">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Marque *</Label>
                 <Input placeholder="Dacia" {...register('carBrand')} className="h-9" />
@@ -291,7 +291,7 @@ export function ReservationForm() {
 
           {/* ── 3. Dates ── */}
           <Section icon={CalendarDays} title="Dates de location">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Date de prise en charge *</Label>
                 <Input
@@ -323,7 +323,7 @@ export function ReservationForm() {
 
           {/* ── 4. Lieux ── */}
           <Section icon={MapPin} title="Lieux de livraison">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Lieu de prise en charge</Label>
                 <Input
@@ -345,7 +345,7 @@ export function ReservationForm() {
 
           {/* ── 5. Paiement ── */}
           <Section icon={CreditCard} title="Paiement">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Méthode de paiement</Label>
                 <Controller

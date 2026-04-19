@@ -138,7 +138,7 @@ export function CarForm({ car, open: controlledOpen, onOpenChange }: CarFormProp
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-2">
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Marque *</Label>
             <Input placeholder="Toyota, Dacia…" {...register('brand')} />
@@ -151,7 +151,7 @@ export function CarForm({ car, open: controlledOpen, onOpenChange }: CarFormProp
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Année *</Label>
             <Input type="number" min={2000} max={new Date().getFullYear() + 1}
@@ -170,7 +170,7 @@ export function CarForm({ car, open: controlledOpen, onOpenChange }: CarFormProp
           <Input placeholder="Blanc, Noir, Rouge…" {...register('color')} />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Carburant *</Label>
             <Controller name="fuelType" control={control}
@@ -202,7 +202,7 @@ export function CarForm({ car, open: controlledOpen, onOpenChange }: CarFormProp
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Nombre de places *</Label>
             <Input type="number" min={2} max={9} {...register('seats', { valueAsNumber: true })} />
@@ -215,7 +215,7 @@ export function CarForm({ car, open: controlledOpen, onOpenChange }: CarFormProp
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label>Prix par jour (MAD) *</Label>
             <Input type="number" min={1} placeholder="350"

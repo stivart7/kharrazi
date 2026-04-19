@@ -87,10 +87,11 @@ const NAV_GROUPS: NavGroup[] = [
 interface SidebarProps {
   open: boolean;
   onToggle: () => void;
+  onClose?: () => void;   // mobile drawer close
 }
 
 // ── Component ──────────────────────────────────────────
-export function Sidebar({ open, onToggle }: SidebarProps) {
+export function Sidebar({ open, onToggle, onClose }: SidebarProps) {
   const pathname  = usePathname();
   const router    = useRouter();
   const { user, clearAuth } = useAuthStore();
@@ -233,10 +234,21 @@ export function Sidebar({ open, onToggle }: SidebarProps) {
           <Car className="w-4 h-4 text-white" />
         </div>
         {open && (
-          <div className="ml-3 overflow-hidden">
+          <div className="ml-3 flex-1 overflow-hidden">
             <p className="font-bold text-sm leading-tight" style={{ color: sidebarTextColor }}>Kharrazi Fleet</p>
             <p className="text-[11px]" style={{ color: labelColor }}>Location Voitures</p>
           </div>
+        )}
+        {/* Mobile close button */}
+        {open && onClose && (
+          <button
+            onClick={onClose}
+            className="ml-2 flex-shrink-0 p-1.5 rounded-lg transition-colors hover:bg-white/10"
+            style={{ color: labelColor }}
+            aria-label="Fermer le menu"
+          >
+            <X className="w-4 h-4" />
+          </button>
         )}
       </div>
 

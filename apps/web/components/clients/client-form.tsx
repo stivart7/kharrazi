@@ -79,7 +79,7 @@ export function ClientForm() {
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4 mt-2">
 
           {/* Nom / Prénom */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Prénom *</Label>
               <Input placeholder="Mohamed" {...register('firstName')} />
@@ -93,7 +93,7 @@ export function ClientForm() {
           </div>
 
           {/* CIN + Passeport */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>CIN *</Label>
               <Input placeholder="A123456" {...register('cin')} />
@@ -106,7 +106,7 @@ export function ClientForm() {
           </div>
 
           {/* Téléphone + Email */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Téléphone *</Label>
               <Input placeholder="0612345678" {...register('phone')} />
@@ -120,7 +120,7 @@ export function ClientForm() {
           </div>
 
           {/* Ville + Adresse */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label>Ville</Label>
               <Input placeholder="Casablanca" {...register('city')} />
